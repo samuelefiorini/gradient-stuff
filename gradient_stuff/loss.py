@@ -4,6 +4,7 @@ Module defining pluggable loss functions for gradient boosting.
 
 import numpy as np
 from abc import ABC, abstractmethod
+from scipy.special import expit  # Sigmoid function
 
 EPS = np.finfo(float).eps
 
@@ -60,16 +61,12 @@ class LogLoss(LossFunction):
     Predictions are in log-odds space (logits).
     """
 
-    def _standard_logistic(self, x):
-        # Convert log-odds to probability
-        return 1 / (1 + np.exp(-x))
-
     def negative_gradient(self, y_true, y_pred):
-        return y_true - self._standard_logistic(y_pred)
+        return y_true - expit(y_pred)
 
     def loss(self, y_true, y_pred):
         # Convert log-odds to probability
-        p = self._standard_logistic(y_pred)
+        p = expit(y_pred)
         # Clip to avoid log(0) error
         p = np.clip(p, EPS, 1 - EPS)
         return -np.mean(y_true * np.log(p) + (1 - y_true) * np.log(1 - p))
@@ -83,5 +80,5 @@ class LogLoss(LossFunction):
 
     def hessian(self, y_pred):
         # Second Derivative (Hessian): p * (1 - p)
-        p = self._standard_logistic(y_pred)
+        p = expit(y_pred)
         return p * (1 - p)
