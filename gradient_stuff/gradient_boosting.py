@@ -29,8 +29,6 @@ class GradientBoosting:
         self.loss = loss
         self.max_depth = max_depth
 
-        self.base_estimator = DecisionTreeRegressor(max_depth=self.max_depth)
-
         # Internal memory
         self.initial_pred_ = None
         self.trees_ = []
@@ -48,7 +46,7 @@ class GradientBoosting:
             residuals = self.loss.negative_gradient(y, current_pred)
 
             # B. Fit a Decision Tree to the Residuals
-            tree = DecisionTreeRegressor(max_depth=self.max_depth, random_state=42)
+            tree = DecisionTreeRegressor(max_depth=self.max_depth)
             tree.fit(X, residuals)
             new_pred = tree.predict(X)
 
