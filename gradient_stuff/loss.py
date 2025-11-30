@@ -4,7 +4,6 @@ Module defining pluggable loss functions for gradient boosting.
 
 import numpy as np
 from abc import ABC, abstractmethod
-from scipy.optimize import minimize_scalar
 
 EPS = np.finfo(float).eps
 
