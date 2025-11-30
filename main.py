@@ -4,78 +4,87 @@ Main script to demonstrate the SimpleGradientBoosting model with visualization.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.linear_model import LinearRegression
 
-from gradient_stuff.loss import MSELoss
+from gradient_stuff.loss import MSELoss, LogLoss
 from gradient_stuff.gradient_boosting import GradientBoosting
+from sklearn.datasets import make_moons
 
 
 def main():
-    # --- Generate Toy Data (Sine Wave + Noise) ---
+    # --- 1. REGRESSION (1D Data) ---
+    print("Training Regression Model (1D)...")
     np.random.seed(42)
-    X = np.linspace(0, 10, 100).reshape(-1, 1)
-    y = np.sin(X).ravel() + np.random.normal(0, 0.2, X.shape[0])
+    X_reg = np.linspace(0, 10, 100).reshape(-1, 1)
+    y_reg = np.sin(X_reg).ravel() + np.random.normal(0, 0.2, X_reg.shape[0])
 
-    # --- Train the Custom Gradient Boosting Model ---
-    gb = GradientBoosting(
-        n_estimators=50,
-        learning_rate=0.2,
-        loss=MSELoss(),
-        base_estimator=DecisionTreeRegressor(max_depth=2),
+    gb_reg = GradientBoosting(
+        n_estimators=50, learning_rate=0.2, max_depth=2, loss=MSELoss()
     )
-    gb.fit(X, y)
+    gb_reg.fit(X_reg, y_reg)
 
-    print(f"Tree Boosting finished. Final Loss: {gb.train_losses_[-1]:.4f}")
+    # --- 2. CLASSIFICATION (2D Data) ---
+    print("Training Classification Model (2D)...")
+    # Using make_moons to generate a non-linear 2D dataset
+    X_clf, y_clf = make_moons(n_samples=300, noise=0.25, random_state=42)
 
-    # --- Visualization Code ---
-    _, axes = plt.subplots(1, 3, figsize=(18, 5))
-
-    # Plot 1: The Final Fit
-    axes[0].scatter(X, y, color="black", label="Data", s=15, alpha=0.6)
-    axes[0].plot(
-        X, gb.predict(X), color="red", linewidth=2, label="Final GB Prediction"
+    # We use a slightly deeper tree (max_depth=2 or 3) to capture interactions between feature 1 and 2
+    gb_clf = GradientBoosting(
+        n_estimators=50, learning_rate=0.5, max_depth=2, loss=LogLoss()
     )
-    axes[0].set_title("Final Model Fit")
-    axes[0].legend()
+    gb_clf.fit(X_clf, y_clf)
 
-    # Plot 2: How the model evolved (Step-by-step)
-    axes[1].scatter(X, y, color="gray", alpha=0.3, s=10)
-    current_pred = np.full(len(y), gb.initial_pred_)
-    steps_to_plot = [0, 2, 10, 49]
-    colors = ["green", "blue", "orange", "red"]
+    # --- PLOTTING ---
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-    for i, learner in enumerate(gb.estimators_):
-        current_pred += gb.learning_rate * learner.predict(X)
-        if i in steps_to_plot:
-            axes[1].plot(
-                X,
-                current_pred,
-                label=f"Iter {i + 1}",
-                color=colors[steps_to_plot.index(i)],
-                linewidth=1.5,
-            )
+    # Plot 1: Regression Fit
+    axes[0, 0].set_title("Regression Fit (1D)")
+    axes[0, 0].scatter(X_reg, y_reg, color="black", alpha=0.5, label="Data")
+    axes[0, 0].plot(
+        X_reg, gb_reg.predict(X_reg), color="red", linewidth=2, label="Prediction"
+    )
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
 
-    axes[1].set_title("Evolution of Prediction")
-    axes[1].legend()
+    # Plot 2: Regression Loss
+    axes[0, 1].set_title("Regression Loss Curve")
+    axes[0, 1].plot(gb_reg.train_losses_, color="blue")
+    axes[0, 1].set_ylabel("MSE")
+    axes[0, 1].set_xlabel("Iterations")
+    axes[0, 1].grid(True, alpha=0.3)
 
-    # Plot 3: Training Loss Curve (Now generic!)
-    axes[2].plot(gb.train_losses_, color="purple", linewidth=2)
-    axes[2].set_title("Training Loss Curve")
-    axes[2].set_xlabel("Iterations")
-    axes[2].set_ylabel("Loss")
-    axes[2].grid(True, linestyle="--", alpha=0.6)
+    # Plot 3: Classification Decision Boundary (2D)
+    # Create a meshgrid to visualize the decision boundary
+    x_min, x_max = X_clf[:, 0].min() - 1, X_clf[:, 0].max() + 1
+    y_min, y_max = X_clf[:, 1].min() - 1, X_clf[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.05), np.arange(y_min, y_max, 0.05))
+
+    # Flatten grid, predict, and reshape
+    Z_logits = gb_clf.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z_probs = 1 / (1 + np.exp(-Z_logits))  # Convert to probability
+    Z_probs = Z_probs.reshape(xx.shape)
+
+    axes[1, 0].set_title("Classification: 2D Decision Boundary")
+    contour = axes[1, 0].contourf(
+        xx, yy, Z_probs, alpha=0.7, cmap="RdBu_r", levels=np.linspace(0, 1, 11)
+    )
+    fig.colorbar(contour, ax=axes[1, 0], label="Probability")
+
+    # Scatter plot of actual data points
+    axes[1, 0].scatter(
+        X_clf[:, 0], X_clf[:, 1], c=y_clf, edgecolors="white", cmap="RdBu_r", s=40
+    )
+    axes[1, 0].set_xlabel("Feature 1")
+    axes[1, 0].set_ylabel("Feature 2")
+
+    # Plot 4: Classification Loss
+    axes[1, 1].set_title("Classification Loss Curve")
+    axes[1, 1].plot(gb_clf.train_losses_, color="green")
+    axes[1, 1].set_ylabel("LogLoss")
+    axes[1, 1].set_xlabel("Iterations")
+    axes[1, 1].grid(True, alpha=0.3)
 
     plt.tight_layout()
     plt.show()
-
-    # --- Demonstrate "Meta" Nature ---
-    print("\n--- Training Component-wise Boosting (Linear Base Learner) ---")
-    gb_linear = SimpleGradientBoosting(
-        n_estimators=50, learning_rate=0.2, base_estimator=LinearRegression()
-    )
-    gb_linear.fit(X, y)
-    print(f"Linear Boosting finished. Final Loss: {gb_linear.train_losses_[-1]:.4f}")
 
 
 if __name__ == "__main__":

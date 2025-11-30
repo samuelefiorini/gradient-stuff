@@ -5,9 +5,7 @@ pluggable loss functions and base estimator (weak learners).
 
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.base import clone, BaseEstimator
 from .loss import MSELoss, LossFunction
-from typing import Optional
 
 
 class GradientBoosting:
@@ -16,7 +14,7 @@ class GradientBoosting:
         loss: LossFunction = MSELoss(),
         learning_rate: float = 0.1,
         n_estimators: int = 100,
-        base_estimator: Optional[BaseEstimator] = None,
+        max_depth: int = 3,
     ):
         """Vanilla Gradient Boosting framework.
 
@@ -24,61 +22,72 @@ class GradientBoosting:
             loss (LossFunction, optional): Loss function to be optimized. Defaults to MSELoss().
             learning_rate (float, optional): Iteration shrinkage constant. Defaults to 0.1.
             n_estimators (int, optional): The number of boosting stages to perform. Defaults to 100.
-            base_estimator (Optional[BaseEstimator], optional): The base estimator to fit in a boosted fashion.
-                Defaults to None corresponds to DecisionTreeRegressor.
+            max_depth (int, optional): Maximum depth of the individual regression estimators. Defaults to 3.
         """
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
         self.loss = loss
+        self.max_depth = max_depth
 
-        # The "Blueprint": An instance of a model that we will clone.
-        # If None, default to a small Decision Tree.
-        if base_estimator is None:
-            self.base_estimator = DecisionTreeRegressor(max_depth=3)
-        else:
-            self.base_estimator = base_estimator
+        self.base_estimator = DecisionTreeRegressor(max_depth=self.max_depth)
 
         # Internal memory
         self.initial_pred_ = None
-        self.estimators_ = []
+        self.trees_ = []
+        self.gammas_ = []
         self.train_losses_ = []
 
     def fit(self, X, y):
-        # 1. Initialize with a constant value
+        # 1. Initial Prediction (Base score)
         self.initial_pred_ = self.loss.initial_prediction(y)
-
-        # Current prediction starts as the constant value for all samples
         current_pred = np.full(len(y), self.initial_pred_)
 
-        # 2. The Boosting Loop
+        # 2. Boosting Loop
         for i in range(self.n_estimators):
-            # A. Calculate the "Pseudo-Residuals"
+            # A. Calculate Gradient (Pseudo-Residuals)
             residuals = self.loss.negative_gradient(y, current_pred)
 
-            # B. Clone the blueprint to create a fresh learner
-            learner = clone(self.base_estimator)
+            # B. Fit a Decision Tree to the Residuals
+            tree = DecisionTreeRegressor(max_depth=self.max_depth, random_state=42)
+            tree.fit(X, residuals)
+            new_pred = tree.predict(X)
 
-            # Fit the learner to the residuals (X -> Residuals)
-            learner.fit(X, residuals)
+            # C. Newton-Raphson Step
+            # Use the Hessian to approximate the step.
+            # Gamma = Sum(Gradient * TreePred) / Sum(Hessian * TreePred^2)
 
-            # C. Update the model predictions
-            learner_pred = learner.predict(X)
-            current_pred += self.learning_rate * learner_pred
+            # 1. Get Hessians (2nd Derivative)
+            hessians = self.loss.hessian(current_pred)
 
-            # Store the learner
-            self.estimators_.append(learner)
+            # 2. Calculate the optimal step size analytically
+            numerator = np.sum(residuals * new_pred)
+            denominator = np.sum(hessians * (new_pred**2))
 
-            # D. Track the loss (Generic now!)
+            # Avoid division by zero
+            if denominator == 0:
+                gamma = 0
+            else:
+                gamma = numerator / denominator
+
+            # D. Update Predictions
+            # Prediction = Old + (Learning Rate * Gamma * Tree)
+            current_pred += self.learning_rate * gamma * new_pred
+
+            # Store tree and gamma
+            self.trees_.append(tree)
+            self.gammas_.append(gamma)
+
+            # Track loss
             self.train_losses_.append(self.loss.loss(y, current_pred))
 
         return self
 
     def predict(self, X):
-        # Start with the initial constant prediction
-        y_pred = np.full(X.shape[0], self.initial_pred_)
+        # Start with base prediction
+        preds = np.full(len(X), self.initial_pred_)
 
-        # Add the weighted contribution of every weak learner
-        for learner in self.estimators_:
-            y_pred += self.learning_rate * learner.predict(X)
+        # Add contributions from all trees
+        for tree, gamma in zip(self.trees_, self.gammas_):
+            preds += self.learning_rate * gamma * tree.predict(X)
 
-        return y_pred
+        return preds

@@ -4,6 +4,7 @@ Module defining pluggable loss functions for gradient boosting.
 
 import numpy as np
 from abc import ABC, abstractmethod
+from scipy.optimize import minimize_scalar
 
 EPS = np.finfo(float).eps
 
@@ -29,6 +30,10 @@ class LossFunction(ABC):
     def initial_prediction(self, y):
         pass
 
+    @abstractmethod
+    def hessian(self, y):
+        pass
+
 
 class MSELoss(LossFunction):
     """
@@ -44,6 +49,10 @@ class MSELoss(LossFunction):
 
     def initial_prediction(self, y):
         return np.mean(y)
+
+    def hessian(self, y_pred):
+        # The second derivative of 0.5*(y-pred)^2 with respect to pred is constant 1
+        return np.ones_like(y_pred)
 
 
 class LogLoss(LossFunction):
@@ -72,3 +81,8 @@ class LogLoss(LossFunction):
         # Avoid division by zero for pure classes
         p = np.clip(p, EPS, 1 - EPS)
         return np.log(p / (1 - p))
+
+    def hessian(self, y_pred):
+        # Second Derivative (Hessian): p * (1 - p)
+        p = self._standard_logistic(y_pred)
+        return p * (1 - p)
