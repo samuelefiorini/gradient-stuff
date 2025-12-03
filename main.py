@@ -84,7 +84,8 @@ def main():
     axes[1, 1].grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig("figure.png")
+    print("Plot saved to figure.png")
 
 
 if __name__ == "__main__":

@@ -3,12 +3,20 @@ Module implementing a simple Gradient Boosting framework with
 pluggable loss functions and base estimator (weak learners).
 """
 
+from typing import List, Optional
 import numpy as np
-from sklearn.tree import DecisionTreeRegressor
+from .decision_tree import DecisionTreeRegressor
 from .loss import MSELoss, LossFunction
 
 
 class GradientBoosting:
+    """
+    A simple Gradient Boosting framework with pluggable loss functions.
+    
+    This class implements the gradient boosting algorithm using a Newton-Raphson
+    step for optimization. It supports custom loss functions and uses a simple
+    DecisionTreeRegressor as the weak learner.
+    """
     def __init__(
         self,
         loss: LossFunction = MSELoss(),
@@ -16,11 +24,12 @@ class GradientBoosting:
         n_estimators: int = 100,
         max_depth: int = 3,
     ):
-        """Vanilla Gradient Boosting framework.
+        """
+        Initialize the Gradient Boosting model.
 
         Args:
-            loss (LossFunction, optional): Loss function to be optimized. Defaults to MSELoss().
-            learning_rate (float, optional): Iteration shrinkage constant. Defaults to 0.1.
+            loss (LossFunction, optional): The loss function to be optimized. Defaults to MSELoss().
+            learning_rate (float, optional): The step size shrinkage used in update to prevents overfitting. Defaults to 0.1.
             n_estimators (int, optional): The number of boosting stages to perform. Defaults to 100.
             max_depth (int, optional): Maximum depth of the individual regression estimators. Defaults to 3.
         """
@@ -30,12 +39,22 @@ class GradientBoosting:
         self.max_depth = max_depth
 
         # Internal memory
-        self.initial_pred_ = None
-        self.trees_ = []
-        self.gammas_ = []
-        self.train_losses_ = []
+        self.initial_pred_: Optional[float] = None
+        self.trees_: List[DecisionTreeRegressor] = []
+        self.gammas_: List[float] = []
+        self.train_losses_: List[float] = []
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> 'GradientBoosting':
+        """
+        Fit the gradient boosting model.
+
+        Args:
+            X (np.ndarray): The training input samples. Shape (n_samples, n_features).
+            y (np.ndarray): The target values (real numbers for regression, 0/1 for classification). Shape (n_samples,).
+
+        Returns:
+            self: Returns the instance itself.
+        """
         # 1. Initial Prediction (Base score)
         self.initial_pred_ = self.loss.initial_prediction(y)
         current_pred = np.full(len(y), self.initial_pred_)
@@ -63,7 +82,7 @@ class GradientBoosting:
 
             # Avoid division by zero
             if denominator == 0:
-                gamma = 0
+                gamma = 0.0
             else:
                 gamma = numerator / denominator
 
@@ -80,8 +99,20 @@ class GradientBoosting:
 
         return self
 
-    def predict(self, X):
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict using the gradient boosting model.
+
+        Args:
+            X (np.ndarray): The input samples. Shape (n_samples, n_features).
+
+        Returns:
+            np.ndarray: The predicted values. Shape (n_samples,).
+        """
         # Start with base prediction
+        if self.initial_pred_ is None:
+             raise ValueError("Model has not been fitted yet.")
+             
         preds = np.full(len(X), self.initial_pred_)
 
         # Add contributions from all trees

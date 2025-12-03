@@ -106,10 +106,9 @@ gradient-stuff/
 ```
 
 ## 🧠 How It Works
-
 This implementation uses **Newton-Raphson** boosting. For each iteration:
 1. **Compute Pseudo-Residuals**: The negative gradient of the loss function with respect to current predictions.
-2. **Fit Weak Learner**: A Decision Tree Regressor is trained to predict these residuals.
+2. **Fit Weak Learner**: A custom, lightweight **Decision Tree Regressor** (implemented from scratch) is trained to predict these residuals.
 3. **Compute Step Size (Gamma)**: We analytically calculate the optimal step size using the Hessian (2nd derivative) of the loss function.
    - $\gamma = \frac{\sum \text{residuals} \times \text{prediction}}{\sum \text{hessian} \times \text{prediction}^2}$
 4. **Update Model**: $F_{new}(x) = F_{old}(x) + \eta \cdot \gamma \cdot h(x)$

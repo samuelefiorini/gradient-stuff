@@ -1,0 +1,43 @@
+# AI Code Generation Guidelines
+
+When I explicitly ask for code, you must generate it following these comprehensive guidelines:
+
+## 1. Language and Dependencies
+
+* **Default to Python:** Use Python 3.11+ unless I specify another language.
+
+* **List Dependencies:** If the code requires external libraries, list them in a comment at the very top, formatted for `pip`.
+
+## 2. Code Quality and Style
+
+* **PEP 8 Compliance:** Adhere to PEP 8 style guidelines for Python code.
+
+* **Descriptive Naming:** Use clear, descriptive names for all variables, functions, and classes.
+
+* **Modularity:** Decompose complex tasks into smaller, well-defined, and reusable functions or classes.
+
+## 3. Documentation and Clarity
+
+* **Type Hints:** Use type hints for all function arguments, return values, and variables as per PEP 484.
+
+* **Docstrings (PEP 257):** Provide comprehensive docstrings for all public modules, functions, classes, and methods. Follow a clear format (like Google Style) that documents:
+
+  * A one-line summary of the object's purpose.
+
+  * A more detailed explanation.
+
+  * `Args:`: A list of arguments, their types, and descriptions.
+
+  * `Returns:`: The type and description of the returned value.
+
+  * `Raises:`: Any exceptions that the function might raise.
+
+* **Insightful Comments:** Add comments to explain the "why" behind complex, non-obvious, or algorithm-specific parts of the code, not just the "what."
+
+## 4. Functionality and Execution
+
+* **Complete and Runnable:** Provide the code in a single, complete, and runnable block.
+
+* **Example Usage:** Include a simple but effective usage example within an `if __name__ == "__main__":` block to demonstrate how the code works and to make it easily testable.
+
+* **Error Handling:** Implement basic and sensible error handling (e.g., using `try...except` blocks) to make the code more robust.
