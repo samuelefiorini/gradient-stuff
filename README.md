@@ -2,8 +2,6 @@
 
 **GradientStuff** is a lightweight, educational implementation of **Gradient Boosting** from scratch in Python. It is designed to be easy to read and understand, making it a perfect resource for learning how gradient boosting machines (GBMs) work under the hood.
 
-![Gradient Boosting Illustration](figure.png)
-*Figure 1 — High-level illustration of gradient boosting training and prediction flow.*
 
 ---
 
@@ -47,16 +45,27 @@ To see the model in action on toy datasets (1D Regression and 2D Classification)
 python main.py
 ```
 
-This will generate plots showing the model's performance and training progress.
+This will generate plots showing the model's performance and an animation of a projection process:
 
+<p align="center">
+  <img src="assets/figure.png" alt="Gradient Boosting Output">
+  <br>
+  <em>Figure 1 — Demo Output: Regression and Classification Fits & Losses.</em>
+</p>
+
+<p align="center">
+  <img src="assets/simplex_projection.gif" alt="Simplex Projection Output">
+  <br>
+  <em>Figure 2 — Demo Output: Unit Simplex Projection Visualization.</em>
+</p>
 ### Using the Library
 You can import `GradientBoosting` and use it similarly to Scikit-Learn estimators.
 
 **Regression Example:**
 ```python
 import numpy as np
-from gradient_stuff.gradient_boosting import GradientBoosting
-from gradient_stuff.loss import MSELoss
+from gradient_stuff.core.gradient_boosting import GradientBoosting
+from gradient_stuff.core.loss import MSELoss
 
 # Prepare data
 X = np.random.rand(100, 1) * 10
@@ -77,7 +86,7 @@ preds = gb.predict(X)
 
 **Classification Example:**
 ```python
-from gradient_stuff.loss import LogLoss
+from gradient_stuff.core.loss import LogLoss
 
 # Train model for binary classification
 gb_clf = GradientBoosting(
@@ -97,9 +106,10 @@ probs = 1 / (1 + np.exp(-logits))
 
 ```
 gradient-stuff/
+├── assets/                   # Output visual assets
 ├── gradient_stuff/
-│   ├── gradient_boosting.py  # Core GradientBoosting class
-│   └── loss.py               # Loss functions (MSE, LogLoss) and derivatives
+│   ├── core/                 # Core mathematical operations
+│   └── viz/                  # Visualization tools
 ├── main.py                   # Demo script with visualizations
 ├── requirements.txt          # Project dependencies
 └── README.md                 # Project documentation
